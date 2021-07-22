@@ -1,0 +1,63 @@
+{
+  "name": "clinq-bridge-sipgate-team",
+  "version": "1.0.0",
+  "description": "CLINQ Bridge for sipgate Team",
+  "main": "dist/index.js",
+  "repository": "git@github.com:sipgate/clinq-bridge-sipgate-team.git",
+  "contributors": [
+    {
+      "name": "Henry Thoma",
+      "email": "thoma@sipgate.de"
+    },
+    {
+      "name": "Jakob Hellermann",
+      "email": "hellermann@sipgate.de"
+    },
+    {
+      "name": "Marcel Wagner",
+      "email": "mwagner@sipgate.de"
+    }
+  ],
+  "license": "Apache-2.0",
+  "scripts": {
+    "prepare": "husky install",
+    "postinstall": "tsc",
+    "start": "ts-node-dev src/index.ts",
+    "lint": "eslint 'src/**/*.ts' --fix"
+  },
+  "dependencies": {
+    "@clinq/bridge": "^11.2.4",
+    "express": "^4.17.1",
+    "husky": "^7.0.1",
+    "sipgateio": "^2.5.2",
+    "uuid": "^7.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.6",
+    "@types/node": "^13.13.4",
+    "@types/uuid": "^8.3.1",
+    "@typescript-eslint/eslint-plugin": "^4.28.4",
+    "@typescript-eslint/parser": "^4.28.4",
+    "eslint": "^7.31.0",
+    "lint-staged": "^10.2.2",
+    "prettier": "^2.0.5",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.8.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix",
+      "git add"
+    ],
+    "*.{json,yml,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  }
+}
