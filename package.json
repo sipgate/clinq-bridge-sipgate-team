@@ -21,7 +21,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "prepare": "husky install",
-    "postinstall": "tsc",
+    "build": "tsc",
     "start": "ts-node-dev src/index.ts",
     "lint": "eslint 'src/**/*.ts' --fix"
   },
