@@ -14,3 +14,6 @@ dist/
 
 #MacOS
 .DS_Store
+
+#Kubernetes
+k8s/prod.yml
