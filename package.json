@@ -1,7 +1,7 @@
 {
   "name": "clinq-bridge-sipgate-team",
-  "version": "1.0.0",
   "description": "CLINQ Bridge for sipgate Team",
+  "private": true,
   "main": "dist/index.js",
   "repository": "git@github.com:sipgate/clinq-bridge-sipgate-team.git",
   "contributors": [
@@ -16,6 +16,10 @@
     {
       "name": "Marcel Wagner",
       "email": "mwagner@sipgate.de"
+    },
+    {
+      "name": "Felix A. Gladisch",
+      "email": "gladisch@sipgate.de"
     }
   ],
   "license": "Apache-2.0",

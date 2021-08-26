@@ -4,20 +4,13 @@ import {
   Contact,
   ContactTemplate,
   ContactUpdate,
-  PhoneNumberLabel,
+  ServerError,
   start,
 } from "@clinq/bridge";
-import {
-  ContactResponse,
-  createContactsModule,
-  sipgateIO,
-  SipgateIOClient,
-} from "sipgateio";
+import { createContactsModule, sipgateIO, SipgateIOClient } from "sipgateio";
 import * as uuid from "uuid";
-
-type Scope = "PRIVATE" | "SHARED";
-
-const SIPGATE_TEAM_CONTACTS_URL = "https://app.sipgate.com/team/contacts";
+import { Scope, SIPGATE_TEAM_CONTACTS_URL } from "./constants";
+import { createContactFromContactResponse } from "./utils";
 
 function sipgateClientFromConfig(config: Config): SipgateIOClient {
   const client = sipgateIO({
@@ -32,67 +25,59 @@ class SipgateTeamAdapter implements Adapter {
    * Fetching contacts from sipgate Team using the sipgateIO node library
    */
   public async getContacts(config: Config): Promise<Contact[]> {
-    const client = sipgateClientFromConfig(config);
+    const client = createContactsModule(sipgateClientFromConfig(config));
 
-    const responseContacts = (
-      await createContactsModule(client).get("ALL")
-    ).filter(
-      (contact) => contact.scope === "SHARED" || contact.scope === "PRIVATE"
-    );
+    try {
+      const contacts = await client.get("ALL");
 
-    return responseContacts.map((contact) => {
-      return this.createContactFromContactResponse(contact);
-    });
-  }
+      const responseContacts = contacts.filter(
+        (contact) => contact.scope === "SHARED" || contact.scope === "PRIVATE"
+      );
 
-  private createContactFromContactResponse(contact: ContactResponse): Contact {
-    return {
-      id: contact.id,
-      name: contact.name,
-      firstName: "",
-      lastName: "",
-      email: contact.emails.length > 0 ? contact.emails[0]?.email : "",
-      organization:
-        contact.organization[0] && contact.organization[0][0]
-          ? contact.organization[0][0]
-          : "",
-      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
-      avatarUrl: "",
-      phoneNumbers: contact.numbers.map((phoneNumber) => {
-        return {
-          label: PhoneNumberLabel.WORK,
-          phoneNumber: phoneNumber.number,
-        };
-      }),
-    };
+      return responseContacts.map(createContactFromContactResponse);
+    } catch (error) {
+      const status = error.response?.status || 500;
+      console.error(`Could not get contacts (${status}):`, error.message);
+      throw new ServerError(status, `Could not get contacts: ${error.message}`);
+    }
   }
 
   public async createContact(
     config: Config,
     contact: ContactTemplate
   ): Promise<Contact> {
-    const client = sipgateClientFromConfig(config);
+    const client = createContactsModule(sipgateClientFromConfig(config));
 
     const id = uuid.v4();
-    await createContactsModule(client).update({
-      id,
-      name: this.selectName(contact),
-      emails: contact.email ? [{ email: contact.email, type: ["WORK"] }] : [],
-      organization: contact.organization ? [[contact.organization, ""]] : [],
-      numbers: contact.phoneNumbers.map((phoneNumber) => ({
-        number: phoneNumber.phoneNumber,
-        type: ["WORK"],
-      })),
-      scope: "SHARED",
-      picture: null,
-      addresses: [],
-    });
-    return {
-      id,
-      ...contact,
-      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
-      avatarUrl: null,
-    };
+
+    try {
+      await client.update({
+        id,
+        name: this.selectName(contact),
+        emails: contact.email ? [{ email: contact.email, type: ["WORK"] }] : [],
+        organization: contact.organization ? [[contact.organization, ""]] : [],
+        numbers: contact.phoneNumbers.map((phoneNumber) => ({
+          number: phoneNumber.phoneNumber,
+          type: ["WORK"],
+        })),
+        scope: "SHARED",
+        picture: null,
+        addresses: [],
+      });
+      return {
+        id,
+        ...contact,
+        contactUrl: SIPGATE_TEAM_CONTACTS_URL,
+        avatarUrl: null,
+      };
+    } catch (error) {
+      const status = error.response?.status || 500;
+      console.error(`Could not create contact (${status}):`, error.message);
+      throw new ServerError(
+        status,
+        `Could not create contact: ${error.message}`
+      );
+    }
   }
 
   private selectName(contact: ContactUpdate | ContactTemplate): string {
@@ -110,47 +95,67 @@ class SipgateTeamAdapter implements Adapter {
     id: string,
     contact: ContactUpdate
   ) {
-    const client = sipgateClientFromConfig(config);
+    const client = createContactsModule(sipgateClientFromConfig(config));
 
-    const oldContact = (await createContactsModule(client).get("SHARED")).find(
-      (findContact) => findContact.id === contact.id
-    );
+    try {
+      const contacts = await client.get("SHARED");
 
-    const oldContactEmailType = oldContact?.emails.find(
-      (email) => email.email === contact.email
-    )?.type;
+      const oldContact = contacts.find(
+        (findContact) => findContact.id === contact.id
+      );
 
-    const payload = {
-      id,
-      name: this.selectName(contact),
-      emails: contact.email
-        ? [{ email: contact.email, type: oldContactEmailType || ["WORK"] }]
-        : [],
-      organization: contact.organization ? [[contact.organization, ""]] : [],
-      numbers: contact.phoneNumbers.map((phoneNumber) => ({
-        number: phoneNumber.phoneNumber,
-        type: oldContact?.numbers.find(
-          (findNumber) => findNumber.number === phoneNumber.phoneNumber
-        )?.type || ["WORK"],
-      })),
-      scope: "SHARED" as Scope,
-      picture: oldContact?.picture || null,
-      addresses: oldContact?.addresses || [],
-    };
+      const oldContactEmailType = oldContact?.emails.find(
+        (email) => email.email === contact.email
+      )?.type;
 
-    await createContactsModule(client).update(payload);
+      const payload = {
+        id,
+        name: this.selectName(contact),
+        emails: contact.email
+          ? [{ email: contact.email, type: oldContactEmailType || ["WORK"] }]
+          : [],
+        organization: contact.organization ? [[contact.organization, ""]] : [],
+        numbers: contact.phoneNumbers.map((phoneNumber) => ({
+          number: phoneNumber.phoneNumber,
+          type: oldContact?.numbers.find(
+            (findNumber) => findNumber.number === phoneNumber.phoneNumber
+          )?.type || ["WORK"],
+        })),
+        scope: "SHARED" as Scope,
+        picture: oldContact?.picture || null,
+        addresses: oldContact?.addresses || [],
+      };
 
-    return {
-      ...contact,
-      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
-      avatarUrl: null,
-    };
+      await client.update(payload);
+
+      return {
+        ...contact,
+        contactUrl: SIPGATE_TEAM_CONTACTS_URL,
+        avatarUrl: null,
+      };
+    } catch (error) {
+      const status = error.response?.status || 500;
+      console.error(`Could not update contact (${status}):`, error.message);
+      throw new ServerError(
+        status,
+        `Could not update contact: ${error.message}`
+      );
+    }
   }
 
   public async deleteContact(config: Config, id: string): Promise<void> {
-    const client = sipgateClientFromConfig(config);
+    const client = createContactsModule(sipgateClientFromConfig(config));
 
-    await createContactsModule(client).delete(id);
+    try {
+      await client.delete(id);
+    } catch (error) {
+      const status = error.response?.status || 500;
+      console.error(`Could not delete contact (${status}):`, error.message);
+      throw new ServerError(
+        status,
+        `Could not delete contact: ${error.message}`
+      );
+    }
   }
 }
 
