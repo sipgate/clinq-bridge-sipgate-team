@@ -7,12 +7,17 @@ import {
   PhoneNumberLabel,
   start,
 } from "@clinq/bridge";
+import {
+  ContactResponse,
+  createContactsModule,
+  sipgateIO,
+  SipgateIOClient,
+} from "sipgateio";
 import * as uuid from "uuid";
 
-const sipgateTeamContactsURL = "https://app.sipgate.com/team/contacts";
+type Scope = "PRIVATE" | "SHARED";
 
-import {ContactResponse, createContactsModule, sipgateIO, SipgateIOClient} from "sipgateio";
-import { Scope } from "sipgateio/dist/contacts";
+const SIPGATE_TEAM_CONTACTS_URL = "https://app.sipgate.com/team/contacts";
 
 function sipgateClientFromConfig(config: Config): SipgateIOClient {
   const client = sipgateIO({
@@ -29,35 +34,36 @@ class SipgateTeamAdapter implements Adapter {
   public async getContacts(config: Config): Promise<Contact[]> {
     const client = sipgateClientFromConfig(config);
 
-    const responseContacts = (await createContactsModule(client).get("ALL"))
-        .filter(contact =>
-              contact.scope === 'SHARED' || contact.scope === 'PRIVATE'
-        );
+    const responseContacts = (
+      await createContactsModule(client).get("ALL")
+    ).filter(
+      (contact) => contact.scope === "SHARED" || contact.scope === "PRIVATE"
+    );
 
     return responseContacts.map((contact) => {
       return this.createContactFromContactResponse(contact);
     });
   }
 
-  private createContactFromContactResponse(contact: ContactResponse): Contact{
-   return {
+  private createContactFromContactResponse(contact: ContactResponse): Contact {
+    return {
       id: contact.id,
-          name: contact.name,
-        firstName: "",
-        lastName: "",
-        email: contact.emails.length > 0 ? contact.emails[0]?.email : "",
-        organization:
-      contact.organization[0] && contact.organization[0][0]
+      name: contact.name,
+      firstName: "",
+      lastName: "",
+      email: contact.emails.length > 0 ? contact.emails[0]?.email : "",
+      organization:
+        contact.organization[0] && contact.organization[0][0]
           ? contact.organization[0][0]
           : "",
-          contactUrl: sipgateTeamContactsURL,
-        avatarUrl: "",
-        phoneNumbers: contact.numbers.map((phoneNumber) => {
-      return {
-        label: PhoneNumberLabel.WORK,
-        phoneNumber: phoneNumber.number,
-      };
-    }),
+      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
+      avatarUrl: "",
+      phoneNumbers: contact.numbers.map((phoneNumber) => {
+        return {
+          label: PhoneNumberLabel.WORK,
+          phoneNumber: phoneNumber.number,
+        };
+      }),
     };
   }
 
@@ -84,19 +90,19 @@ class SipgateTeamAdapter implements Adapter {
     return {
       id,
       ...contact,
-      contactUrl: sipgateTeamContactsURL,
+      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
       avatarUrl: null,
     };
   }
 
-  private selectName(contact: ContactUpdate | ContactTemplate): string{
-    if (contact.name !== "" && contact.name !== null){
+  private selectName(contact: ContactUpdate | ContactTemplate): string {
+    if (contact.name !== "" && contact.name !== null) {
       return contact?.name;
-    } else if(contact.firstName !== "" || contact.lastName !== ""){
+    } else if (contact.firstName !== "" || contact.lastName !== "") {
       return `${contact.firstName} ${contact.lastName}`;
     }
 
-    return '';
+    return "";
   }
 
   public async updateContact(
@@ -127,17 +133,16 @@ class SipgateTeamAdapter implements Adapter {
           (findNumber) => findNumber.number === phoneNumber.phoneNumber
         )?.type || ["WORK"],
       })),
-      scope: 'SHARED' as Scope,
+      scope: "SHARED" as Scope,
       picture: oldContact?.picture || null,
       addresses: oldContact?.addresses || [],
     };
 
-    console.log(JSON.stringify(payload));
-
     await createContactsModule(client).update(payload);
+
     return {
       ...contact,
-      contactUrl: sipgateTeamContactsURL,
+      contactUrl: SIPGATE_TEAM_CONTACTS_URL,
       avatarUrl: null,
     };
   }
