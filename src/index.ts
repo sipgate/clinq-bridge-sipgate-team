@@ -30,11 +30,7 @@ class SipgateTeamAdapter implements Adapter {
     try {
       const contacts = await client.get("ALL");
 
-      const responseContacts = contacts.filter(
-        (contact) => contact.scope === "SHARED" || contact.scope === "PRIVATE"
-      );
-
-      return responseContacts.map(createContactFromContactResponse);
+      return contacts.map(createContactFromContactResponse);
     } catch (error) {
       const status = error.response?.status || 500;
       console.error(`Could not get contacts (${status}):`, error.message);
