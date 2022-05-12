@@ -8,8 +8,8 @@ export const createContactFromContactResponse = (
   return {
     id: contact.id,
     name: contact.name,
-    firstName: "",
-    lastName: "",
+    firstName: contact.name.split(" ")[0] || "",
+    lastName: contact.name.split(" ")[1] || "",
     email: contact.emails.length > 0 ? contact.emails[0]?.email : "",
     organization:
       contact.organization[0] && contact.organization[0][0]
