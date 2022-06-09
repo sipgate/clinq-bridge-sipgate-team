@@ -19,9 +19,26 @@ export const createContactFromContactResponse = (
     avatarUrl: "",
     phoneNumbers: contact.numbers.map((phoneNumber) => {
       return {
-        label: PhoneNumberLabel.WORK,
+        label: getLabelForPhonenumber(phoneNumber.type),
         phoneNumber: phoneNumber.number,
       };
     }),
   };
+};
+
+const getLabelForPhonenumber = (types: string[]): PhoneNumberLabel => {
+  if (types.includes("FAX")) {
+    if (types.includes("WORK")) return PhoneNumberLabel.WORKFAX;
+    if (types.includes("HOME")) return PhoneNumberLabel.HOMEFAX;
+
+    return PhoneNumberLabel.OTHERFAX;
+  }
+
+  if (types.includes("PAGER")) return PhoneNumberLabel.PAGER;
+  if (types.includes("CELL")) return PhoneNumberLabel.MOBILE;
+  if (types.includes("WORK")) return PhoneNumberLabel.WORK;
+  if (types.includes("HOME")) return PhoneNumberLabel.HOME;
+  if (types.includes("OTHER")) return PhoneNumberLabel.OTHER;
+
+  return PhoneNumberLabel.WORK;
 };
