@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@clinq/bridge": "^11.8.6",
-    "express": "^4.17.1",
+    "express": "^4.18.2",
     "husky": "^7.0.1",
     "sipgateio": "^2.5.2",
     "uuid": "^7.0.3"
